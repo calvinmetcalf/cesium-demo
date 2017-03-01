@@ -49,11 +49,8 @@ class CartoLayer extends global.Cesium.UrlTemplateImageryProvider{
       if (data.data.hasOwnProperty(key)) {
         var res = data.data[key];
         var out = {};
-        if (res.name) {
-          out.name = res.name;
-        }
-        if (res.december_2 && res.december_2.toLocaleString) {
-          out.description = `cost is $${res.december_2.toLocaleString()}`;
+        if (res.clli) {
+          out.name = res.clli;
         }
         return [out];
       }
@@ -75,15 +72,17 @@ function makeCarto(){
           type: 'mapnik',
           options: {
             cartocss_version: '2.1.1',
-            sql: 'SELECT * FROM clientdemos.state_spending',
+            sql: 'SELECT * FROM clientdemos.caf_buildout',
             cartocss: `#layer {
-             polygon-fill: ramp([december_2], (#ffc6c4, #ee919b, #cc607d, #9e3963, #672044), quantiles);
-            polygon-opacity: 0.75;
-             line-width: 1;
-             line-color: #FFF;
-             line-opacity: 0.5;
-           }`,
-            interactivity: ['name', 'december_2']
+              marker-width: 12;
+              marker-fill: #e7d810;
+              marker-fill-opacity: 1;
+              marker-allow-overlap: true;
+              marker-line-width: 0.4;
+              marker-line-color: #ffffff;
+              marker-line-opacity: 1;
+            }`,
+            interactivity: ['clli']
           }
         }]
       })
