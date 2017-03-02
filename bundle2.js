@@ -14,7 +14,7 @@ const uftDecode = c => {
   return c - 32;
 }
 class CartoLayer extends global.Cesium.UrlTemplateImageryProvider{
-  constructor(username, layergroupid) {
+  constructor(username, layergroupid, generateData) {
     super({
       url: `https://${username}.carto.com/api/v1/map/${layergroupid}/{z}/{x}/{y}.png`,
       credit: 'cartodb',
@@ -28,7 +28,7 @@ class CartoLayer extends global.Cesium.UrlTemplateImageryProvider{
     this.tileSize = 256;
     this.username = username;
     this.layergroupid = layergroupid;
-    this.rectangleScratch = new global.Cesium.Rectangle();
+    this.generateData = generateData;
   }
   pickFeatures(x, y, level, _longitude, _latitude) {
     const longitude = R2D * _longitude;
@@ -49,18 +49,13 @@ class CartoLayer extends global.Cesium.UrlTemplateImageryProvider{
       var idx = uftDecode(data.grid[gridY].charCodeAt(gridX));
       const key = data.keys[idx];
       if (data.data.hasOwnProperty(key)) {
-        var res = data.data[key];
-        var out = {};
-        if (res.clli) {
-          out.name = res.clli;
-        }
-        return [out];
+        return [this.generateData(data.data[key])];
       }
       return [];
     }).catch(()=>[]);
   }
 }
-function makeCarto(){
+function makeCarto(sql, css, interactivity, generateData){
   return fetch(`https://${username}.carto.com/api/v1/map`, {
     method: 'post',
     headers: {
@@ -74,17 +69,9 @@ function makeCarto(){
           type: 'mapnik',
           options: {
             cartocss_version: '2.1.1',
-            sql: 'SELECT * FROM clientdemos.caf_buildout',
-            cartocss: `#layer {
-              marker-width: 12;
-              marker-fill: #e7d810;
-              marker-fill-opacity: 1;
-              marker-allow-overlap: true;
-              marker-line-width: 0.4;
-              marker-line-color: #ffffff;
-              marker-line-opacity: 1;
-            }`,
-            interactivity: ['clli']
+            sql: sql,
+            cartocss: css,
+            interactivity: interactivity
           }
         }]
       })
@@ -94,7 +81,7 @@ function makeCarto(){
     }
     throw new Error(`expected 200 but got ${resp.status}`);
   }).then(resp=>{
-    return new CartoLayer(username, resp.layergroupid)
+    return new CartoLayer(username, resp.layergroupid, generateData)
   })
 
 
@@ -294,7 +281,25 @@ var viewer = new Cesium.Viewer('cesiumContainer', {
   scene3DOnly: true,
   geocoder: false
 });
-cartoLayer().then(l=> viewer.scene.imageryLayers.addImageryProvider(l)).catch(e=>console.log(e));
+var sql = 'SELECT * FROM clientdemos.caf_buildout';
+var css = `#layer {
+  marker-width: 12;
+  marker-fill: #e7d810;
+  marker-fill-opacity: 1;
+  marker-allow-overlap: true;
+  marker-line-width: 0.4;
+  marker-line-color: #ffffff;
+  marker-line-opacity: 1;
+}`;
+var interactivity = ['clli'];
+function genData(res) {
+  var out = {};
+  if (res.clli) {
+    out.name = res.clli;
+  }
+  return out;
+}
+cartoLayer(sql, css, interactivity, genData).then(l=> viewer.scene.imageryLayers.addImageryProvider(l)).catch(e=>console.log(e));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./carto-layer":1}]},{},[3]);

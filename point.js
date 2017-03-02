@@ -13,22 +13,21 @@ var viewer = new Cesium.Viewer('cesiumContainer', {
   scene3DOnly: true,
   geocoder: false
 });
-var sql = 'SELECT * FROM clientdemos.us_states';
+var sql = 'SELECT * FROM clientdemos.caf_buildout';
 var css = `#layer {
- polygon-fill: ramp([dec_spend], (#ffc6c4, #ee919b, #cc607d, #9e3963, #672044), quantiles);
-polygon-opacity: 0.75;
- line-width: 1;
- line-color: #FFF;
- line-opacity: 0.5;
+  marker-width: 12;
+  marker-fill: #e7d810;
+  marker-fill-opacity: 1;
+  marker-allow-overlap: true;
+  marker-line-width: 0.4;
+  marker-line-color: #ffffff;
+  marker-line-opacity: 1;
 }`;
-var interactivity = ['name', 'dec_spend'];
+var interactivity = ['clli'];
 function genData(res) {
   var out = {};
-  if (res.name) {
-    out.name = res.name;
-  }
-  if (res.dec_spend && res.dec_spend.toLocaleString) {
-    out.description = `cost is $${res.dec_spend.toLocaleString()}`;
+  if (res.clli) {
+    out.name = res.clli;
   }
   return out;
 }

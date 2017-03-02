@@ -14,7 +14,7 @@ const uftDecode = c => {
   return c - 32;
 }
 class CartoLayer extends global.Cesium.UrlTemplateImageryProvider{
-  constructor(username, layergroupid) {
+  constructor(username, layergroupid, generateData) {
     super({
       url: `https://${username}.carto.com/api/v1/map/${layergroupid}/{z}/{x}/{y}.png`,
       credit: 'cartodb',
@@ -28,7 +28,7 @@ class CartoLayer extends global.Cesium.UrlTemplateImageryProvider{
     this.tileSize = 256;
     this.username = username;
     this.layergroupid = layergroupid;
-    this.rectangleScratch = new global.Cesium.Rectangle();
+    this.generateData = generateData;
   }
   pickFeatures(x, y, level, _longitude, _latitude) {
     const longitude = R2D * _longitude;
@@ -49,21 +49,13 @@ class CartoLayer extends global.Cesium.UrlTemplateImageryProvider{
       var idx = uftDecode(data.grid[gridY].charCodeAt(gridX));
       const key = data.keys[idx];
       if (data.data.hasOwnProperty(key)) {
-        var res = data.data[key];
-        var out = {};
-        if (res.name) {
-          out.name = res.name;
-        }
-        if (res.december_2 && res.december_2.toLocaleString) {
-          out.description = `cost is $${res.december_2.toLocaleString()}`;
-        }
-        return [out];
+        return [this.generateData(data.data[key])];
       }
       return [];
     }).catch(()=>[]);
   }
 }
-function makeCarto(){
+function makeCarto(sql, css, interactivity, generateData){
   return fetch(`https://${username}.carto.com/api/v1/map`, {
     method: 'post',
     headers: {
@@ -77,15 +69,9 @@ function makeCarto(){
           type: 'mapnik',
           options: {
             cartocss_version: '2.1.1',
-            sql: 'SELECT * FROM clientdemos.state_spending',
-            cartocss: `#layer {
-             polygon-fill: ramp([december_2], (#ffc6c4, #ee919b, #cc607d, #9e3963, #672044), quantiles);
-            polygon-opacity: 0.75;
-             line-width: 1;
-             line-color: #FFF;
-             line-opacity: 0.5;
-           }`,
-            interactivity: ['name', 'december_2']
+            sql: sql,
+            cartocss: css,
+            interactivity: interactivity
           }
         }]
       })
@@ -95,7 +81,7 @@ function makeCarto(){
     }
     throw new Error(`expected 200 but got ${resp.status}`);
   }).then(resp=>{
-    return new CartoLayer(username, resp.layergroupid)
+    return new CartoLayer(username, resp.layergroupid, generateData)
   })
 
 
@@ -295,7 +281,26 @@ var viewer = new Cesium.Viewer('cesiumContainer', {
   scene3DOnly: true,
   geocoder: false
 });
-cartoLayer().then(l=> viewer.scene.imageryLayers.addImageryProvider(l)).catch(e=>console.log(e));
+var sql = 'SELECT * FROM clientdemos.us_states';
+var css = `#layer {
+ polygon-fill: ramp([dec_spend], (#ffc6c4, #ee919b, #cc607d, #9e3963, #672044), quantiles);
+polygon-opacity: 0.75;
+ line-width: 1;
+ line-color: #FFF;
+ line-opacity: 0.5;
+}`;
+var interactivity = ['name', 'dec_spend'];
+function genData(res) {
+  var out = {};
+  if (res.name) {
+    out.name = res.name;
+  }
+  if (res.dec_spend && res.dec_spend.toLocaleString) {
+    out.description = `cost is $${res.dec_spend.toLocaleString()}`;
+  }
+  return out;
+}
+cartoLayer(sql, css, interactivity, genData).then(l=> viewer.scene.imageryLayers.addImageryProvider(l)).catch(e=>console.log(e));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./carto-layer":1}]},{},[3]);
